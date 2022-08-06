@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   height="300px"
+   width="300px"
+   viewBox="0 0 36 36"
+   fill="none"
+   x="0px"
+   y="0px"
+   version="1.1"
+   id="svg51"
+   sodipodi:docname="loading.svg"
+   inkscape:version="1.1 (c68e22c387, 2021-05-23)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs55" />
+  <sodipodi:namedview
+     id="namedview53"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:pageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     showgrid="false"
+     inkscape:zoom="1.0166667"
+     inkscape:cx="-43.770492"
+     inkscape:cy="150"
+     inkscape:window-width="934"
+     inkscape:window-height="1046"
+     inkscape:window-x="968"
+     inkscape:window-y="16"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg51" />
+  <path
+     fill-rule="evenodd"
+     clip-rule="evenodd"
+     d="M18 5C10.8203 5 5 10.8203 5 18C5 25.1797 10.8203 31 18 31C25.1797 31 31 25.1797 31 18H33C33 26.2843 26.2843 33 18 33C9.71573 33 3 26.2843 3 18C3 9.71573 9.71573 3 18 3V5Z"
+     fill="black"
+     id="path49"
+     style="fill:#ffffff;fill-opacity:1" />
+</svg>

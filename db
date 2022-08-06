@@ -1,0 +1,61 @@
+CREATE USER 'p2render'@'localhost' IDENTIFIED BY 'bI7mpjg5WW4rCxHm';
+CREATE DATABASE p2render;
+
+GRANT ALL PRIVILEGES ON p2render.* TO p2render@localhost;
+FLUSH PRIVILEGES;
+
+USE p2render;
+
+DROP TABLE IF EXISTS videos;
+DROP TABLE IF EXISTS maps;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS changelogs_errored;
+DROP TABLE IF EXISTS misc_data;
+
+CREATE TABLE maps (
+	id INT NOT NULL,
+	name VARCHAR(255) NOT NULL,
+	coop BOOLEAN NOT NULL,
+	PRIMARY KEY (id),
+	FULLTEXT (name)
+);
+
+CREATE TABLE users (
+	id BIGINT NOT NULL,
+	name VARCHAR(255) NOT NULL,
+	PRIMARY KEY (id),
+	FULLTEXT (name)
+);
+
+CREATE TABLE changelogs_errored (
+	id INT NOT NULL,
+	reason VARCHAR(255) NOT NULL,
+	error_date DATETIME NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE videos (
+	id INT NOT NULL,
+	user BIGINT NOT NULL,
+	map INT NOT NULL,
+	time DECIMAL(7,2) NOT NULL,
+	cur_rank INT,
+	orig_rank INT NOT NULL,
+	comment VARCHAR(100),
+	date DATETIME NOT NULL,
+	video_url VARCHAR(1000),
+	thumb_url VARCHAR(1000),
+	views INT NOT NULL,
+	obsoleted BOOLEAN NOT NULL,
+	should_render BOOLEAN NOT NULL,
+	rendered_by VARCHAR(100),
+	PRIMARY KEY (id),
+	FOREIGN KEY (user) REFERENCES users(id),
+	FOREIGN KEY (map) REFERENCES maps(id)
+);
+
+CREATE TABLE misc_data (
+	key_ VARCHAR(64) NOT NULL,
+	value VARCHAR(256),
+	PRIMARY KEY (key_)
+);
