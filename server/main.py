@@ -78,36 +78,31 @@ def search(db, db_cur):
     args = request.args
 
     if "q" not in args:
-        abort(400) # Bad Request
-
-    if args["q"].strip() == "":
         # Return recent videos rather than actual search results
         return recent_videos(db, db_cur)
 
-    # Do some processing on the terms to convert to a format that SQL
-    # will deal with better
+    # Do some processing on the terms to simplify the query
 
-    words = re.findall(r"\w+", args["q"].lower())
+    words = re.sub(r"""['"\/+-?.,=|]""", "", args["q"]).lower().strip().split()
+
+    if len(words) == 0:
+        # Return recent videos rather than actual search results
+        return recent_videos(db, db_cur)
 
     # Step 0: if they"ve given an ID, try and parse it
 
-    force_user_id, force_other_id = None, None
+    force_id, force_other_id = None, None
 
     for w in words.copy():
         try:
-            x = int(w)
-            if len(w) == 17:
-                # user ID
-                force_user_id = x
-                words.remove(w)
-            elif len(w) > 4:
-                # changelog or map ID
-                force_other_id = x
+            if len(w) >= 4:
+                # maybe some kind of id?
+                force_id = int(w)
                 words.remove(w)
         except ValueError:
             pass
 
-    # Step 1: try to parse out a map name
+    # Step 1: score map names
 
     maps = []
 
@@ -123,16 +118,30 @@ def search(db, db_cur):
             words_new[words_new.index("propulsion")] = "prop"
             maps.append((map_id, words_new))
 
+        # same for "coop"
+        if "cooperative" in map_words:
+            words_new = map_words.copy()
+            words_new[words_new.index("cooperative")] = "coop"
+            maps.append((map_id, words_new))
+
     map_confidences = {}
+    best_map = None
 
     for map_id, map_words in maps:
         val = try_match(words, map_words)
+        if val > 30:
+            length_bonus = max(0, min(15, len(" ".join(map_words)) - 5))
+            val = val + length_bonus
+            if map_id not in map_confidences or val > map_confidences[map_id]:
+                map_confidences[map_id] = val
+                if best_map is None or val > map_confidences[best_map]:
+                    best_map = map_id
 
-        if val > 50:
-            if map_id not in map_confidences:
-                map_confidences[map_id] = val
-            elif val > map_confidences[map_id]:
-                map_confidences[map_id] = val
+    if best_map is not None:
+        # Make sure the best-ranked map is at the top
+        # This is for cases where the map names are going to be close in
+        # ranking, e.g. 'Polarity' vs 'Cooperative Polarity'
+        map_confidences[best_map] = int(map_confidences[best_map] * 1.5)
 
     # Step 2: try to parse out a rank
 
@@ -153,28 +162,34 @@ def search(db, db_cur):
             rank = int(w)
             break
 
-    # Step 3: runner name
+    # Step 3: score runner names
 
     user_confidences = {}
 
     db_cur.execute("SELECT id, name FROM users")
     for user_id, name in db_cur:
-        user_words = re.findall(r"\w+", name.lower())
+        user_words = re.sub(r"""['"\/+-?.,=|]""", "", name).lower().strip().split()
         val = try_match(words, user_words)
-
-        if val > 50:
-            if user_id not in user_confidences:
+        if val > 30:
+            length_bonus = max(0, min(15, len(" ".join(user_words)) - 5))
+            val = val + length_bonus
+            if user_id not in user_confidences or val > user_confidences[user_id]:
                 user_confidences[user_id] = val
-            elif val > user_confidences[user_id]:
-                user_confidences[user_id] = val
 
-    map_id = max(map_confidences.items(), key=operator.itemgetter(1)) if len(map_confidences) > 0 else None
-    user_id = max(user_confidences.items(), key=operator.itemgetter(1)) if len(user_confidences) > 0 else None
-
+    # Get the search start index
     try:
         start = int(args["start"]) if "start" in args else 0
     except ValueError:
         start = 0
+
+    # We have all the data we need. Now, create some temporary tables to store
+    # the map and user rankings
+    db_cur.execute("CREATE TEMPORARY TABLE search_map_score (id INT NOT NULL, score INT NOT NULL, PRIMARY KEY (id))");
+    db_cur.execute("CREATE TEMPORARY TABLE search_user_score (id BIGINT NOT NULL, score INT NOT NULL, PRIMARY KEY (id))");
+    for map_id, score in map_confidences.items():
+        db_cur.execute("INSERT INTO search_map_score VALUES (?,?)", (map_id, score))
+    for user_id, score in user_confidences.items():
+        db_cur.execute("INSERT INTO search_user_score VALUES (?,?)", (user_id, score))
 
     db_cur.execute("""
         SELECT
@@ -191,28 +206,30 @@ def search(db, db_cur):
             videos.obsoleted            AS obsoleted,
             DATE_FORMAT(videos.date, "%Y-%m-%dT%TZ") AS date,
             (
-                IF(videos.user = ?, ?, 0) +
-                IF(videos.map = ?, ?, 0) +
-                IF(videos.cur_rank = ?, 1.0, IF(videos.orig_rank = ?, 0.6, 0)) +
-                videos.views * 0.005 +
-                IF(videos.user = ?, 10.0, 0) +
-                IF(videos.id = ?, 20.0, 0) +
-                IF(videos.map = ?, 10.0, 0)
-            ) AS rank
+                IFNULL((SELECT score FROM search_map_score WHERE id=videos.map), 0) +
+                IFNULL((SELECT score FROM search_user_score WHERE id=videos.user), 0) +
+                IF(
+                    ISNULL(?),
+                    GREATEST(0, IF(ISNULL(videos.cur_rank), 10 - videos.orig_rank, 20 - videos.cur_rank)),
+                    IF(videos.cur_rank = ?, 50, IF(videos.orig_rank = ?, 30, 0))
+                ) +
+                LEAST(20, 2 * SQRT(videos.views)) +
+                IF(? IN (videos.id, videos.user, videos.map), 1000, 0)
+            ) AS score
         FROM
             videos
             INNER JOIN users ON (videos.user = users.id)
             INNER JOIN maps ON (videos.map = maps.id)
         WHERE video_url IS NOT NULL
-        HAVING rank > 0.5
-        ORDER BY rank DESC, videos.date DESC
+        HAVING score > 60
+        ORDER BY score DESC, videos.date DESC
         LIMIT ?, 21
-    """, (user_id[0] if user_id else None, user_id[1] / 100 if user_id else None, map_id[0] if map_id else None, map_id[1] / 100 if map_id else None, rank, rank, force_user_id, force_other_id, force_other_id, start))
+    """, (rank, rank, rank, force_id, start))
 
     results = []
 
     for row in fetch_dict(db_cur):
-        del row["rank"]
+        del row["score"]
         results.append(row)
 
     end = True
