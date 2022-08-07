@@ -165,6 +165,7 @@ def search(db, db_cur):
     # Step 3: score runner names
 
     user_confidences = {}
+    best_user = None
 
     db_cur.execute("SELECT id, name FROM users")
     for user_id, name in db_cur:
@@ -175,6 +176,12 @@ def search(db, db_cur):
             val = val + length_bonus
             if user_id not in user_confidences or val > user_confidences[user_id]:
                 user_confidences[user_id] = val
+                if best_user is None or val > user_confidences[best_user]:
+                    best_user = user_id
+
+    if user_id is not None:
+        # Make sure the best-ranked user is at the top
+        user_confidences[best_user] = int(user_confidences[best_user] * 1.5)
 
     # Get the search start index
     try:
