@@ -416,7 +416,7 @@ def upload_video(username, db, db_cur, vid_id):
 
 
     requests.post(
-        "https://discord.com/api/webhooks/" + ...,
+        settings.WEBHOOK_URL,
         params={
             "thread_id": "1005216644907409438",
         },
