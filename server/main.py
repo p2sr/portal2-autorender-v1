@@ -83,7 +83,7 @@ def search(db, db_cur):
 
     # Do some processing on the terms to simplify the query
 
-    words = re.sub(r"""['"\/+-?.,=|]""", "", args["q"]).lower().strip().split()
+    words = re.sub(r"""['"\/+?.,=|-]""", "", args["q"]).lower().strip().split()
 
     if len(words) == 0:
         # Return recent videos rather than actual search results
@@ -91,7 +91,7 @@ def search(db, db_cur):
 
     # Step 0: if they"ve given an ID, try and parse it
 
-    force_id, force_other_id = None, None
+    force_id = None
 
     for w in words.copy():
         try:
@@ -179,7 +179,7 @@ def search(db, db_cur):
                 if best_user is None or val > user_confidences[best_user]:
                     best_user = user_id
 
-    if user_id is not None:
+    if best_user is not None:
         # Make sure the best-ranked user is at the top
         user_confidences[best_user] = int(user_confidences[best_user] * 1.5)
 
