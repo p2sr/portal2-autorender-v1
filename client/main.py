@@ -44,7 +44,10 @@ async def try_render(demos):
     # delete all existing renders
     for item in os.listdir(f"{settings.PORTAL2_DIR}/portal2/demos"):
         if item.endswith(".dem.mp4"):
-            os.remove(f"{settings.PORTAL2_DIR}/portal2/demos/{item}")
+            try:
+                os.remove(f"{settings.PORTAL2_DIR}/portal2/demos/{item}")
+            except PermissionError:
+                pass # let's just hope nothing breaks
     
     # total demo duration
     duration = 0.0
@@ -79,6 +82,9 @@ async def try_render(demos):
     except asyncio.TimeoutError:
         # timeout
         proc.kill()
+
+    # this might help make sure file handles are properly closed? idk
+    await asyncio.sleep(1)
 
     # check whether any renders happened at all
     if not os.path.exists(f"{settings.PORTAL2_DIR}/portal2/demos/{settings.DUMMY_DEMO}.dem.mp4"):
@@ -118,6 +124,8 @@ async def render_maybe_corrupt(demo):
         # we successfully renderered the demo
         move_rendered_demo(demo)
         asyncio.create_task(upload_demo(demo))
+        # try and make sure everything's been moved
+        await asyncio.sleep(1)
     else:
         # that demo is definitely corrupt
         report_corrupt_demo(demo, "Render failed after 2 attempts")
@@ -132,6 +140,9 @@ async def render_many(demos):
             dem_id = demo["id"]
             os.unlink(f"{settings.PORTAL2_DIR}/portal2/demos/{dem_id}.dem")
             asyncio.create_task(upload_demo(demo))
+
+        # try and make sure everything's been moved
+        await asyncio.sleep(1)
 
         # the first incomplete demo could be corrupt
         if len(incomplete) > 0:
