@@ -79,7 +79,11 @@ def update_changelog(now, changelog, last_handled):
             comment = entry["note"]
             #should_render = entry["hasDemo"] != "0" and entry["youtubeID"] is None
             should_render = entry["hasDemo"] and entry["hasDemo"] != "0" # might be bool or string
-            if coop and row["date"] < datetime.datetime(2021, 2, 19) + datetime.timedelta(weeks=3):
+
+            db_cur.execute("SELECT 1 FROM maps WHERE id=? AND coop", (map_id,))
+            coop = bool(db_cur.fetchone())
+
+            if coop and timestamp < datetime.datetime(2021, 2, 19) + datetime.timedelta(weeks=3):
                 should_render = False # pre-update coop demo
 
             db_cur.execute("UPDATE videos SET cur_rank = IF(cur_rank+1 > 500, NULL, cur_rank+1) WHERE map=? AND cur_rank <= ? AND cur_rank >= ? AND time != ?", (map_id, pre_rank, post_rank, Decimal(score) / 100))
@@ -134,6 +138,16 @@ def CRON_update_changelog_api():
         pass # TODO error
 
     update_changelog(now, reversed(changelog), last_handled) # Reverse the changelog so we get the changes in order
+
+def CRON_update_changelog_api_full(days):
+    now = datetime.datetime.now()
+
+    changelog = requests.get(f"{settings.BOARDS_BASE}/changelog/json?maxDaysAgo={days}").json()
+
+    if not changelog:
+        pass # TODO error
+
+    update_changelog(now, reversed(changelog), None) # Reverse the changelog so we get the changes in order
 
 def CRON_update_changelog_db(database):
     db_args = {
