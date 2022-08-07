@@ -470,7 +470,8 @@ def video_page(db, db_cur):
             videos.time                 AS time,
             videos.thumb_url            AS thumb_url,
             videos.video_url            AS video_url,
-            videos.comment              AS comment
+            videos.comment              AS comment,
+            videos.date                 AS date
         FROM
             videos
             INNER JOIN users ON (videos.user = users.id)
@@ -499,6 +500,7 @@ def video_page(db, db_cur):
         .replace("{comment}", comment)
         .replace("{thumb_url}", row["thumb_url"])
         .replace("{video_url}", row["video_url"])
+        .replace("{date}", row["date"].isoformat())
         .replace("{url_base}", "https://autorender.portal2.sr"))
 
     return page
