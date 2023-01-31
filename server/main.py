@@ -319,6 +319,21 @@ def video_view(db, db_cur, vid_id):
 
     return {}
 
+@app.route("/api/v1/check-videos-exist", methods=["POST"])
+@with_db
+def check_videos_exist(db, db_cur):
+    json = request.get_json()
+    if "ids" not in json or not isinstance(json["ids"], list):
+        abort(400) # Bad Request
+
+    vids = []
+    for vid_id in json["ids"]:
+        db_cur.execute("SELECT 1 FROM videos WHERE video_url IS NOT NULL AND id=?", (vid_id,))
+        if db_cur.fetchone():
+            vids.append(vid_id)
+
+    return {"ids": vids}
+
 def authenticated(f):
     @wraps(f)
     def wrapped(*args, **kwargs):
