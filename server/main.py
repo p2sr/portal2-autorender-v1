@@ -334,6 +334,26 @@ def authenticated(f):
 
     return wrapped
 
+@app.route("/api/v1/video/<int:vid_id>", methods=["DELETE"])
+@with_db
+@authenticated
+def video_delete(username, db, db_cur, vid_id):
+    db_cur.execute("SELECT 1 FROM videos WHERE video_url IS NOT NULL AND id=?", (vid_id,))
+    if not db_cur.fetchone():
+        abort(404) # Not Found
+
+    b2_api = b2.B2Api(b2.InMemoryAccountInfo())
+    b2_api.authorize_account("production", settings.B2_APP_KEY_ID, settings.B2_APP_KEY)
+    b2_bucket = b2_api.get_bucket_by_name(settings.B2_BUCKET)
+    
+    b2_bucket.get_file_info_by_name(f"{vid_id}.mp4").delete()
+    b2_bucket.get_file_info_by_name(f"{vid_id}.jpg").delete()
+
+    db_cur.execute("UPDATE videos SET video_url=NULL, thumb_url=NULL, rendered_by=NULL WHERE id=?", (vid_id,))
+    db.commit()
+
+    return {}
+
 @app.route("/api/v1/upload/pending", methods=["GET"])
 @with_db
 @authenticated
