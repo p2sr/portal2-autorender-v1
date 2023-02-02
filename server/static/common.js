@@ -1,4 +1,4 @@
-const apiBase = "http://localhost:5000/api/v1";
+const apiBase = "https://autorender.portal2.sr/api/v1";
 const boardsBase = "https://board.portal2.sr";
 
 function formatTime(total) {

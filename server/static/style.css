@@ -138,15 +138,23 @@ a {
 	justify-content: space-between;
 	width: 60vw;
 	margin-bottom: 30px;
+	gap: 2em;
 }
 
 .video-views, .video-title {
 	font-size: 1.4em;
 }
 
+.video-rendered-by {
+	font-size: 0.8em;
+	color: #ccc;
+	margin: auto;
+}
+
 .video-info .video-description {
 	display: flex;
 	flex-direction: column;
+	flex-grow: 1;
 }
 
 .video-description span {

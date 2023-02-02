@@ -263,6 +263,7 @@ def video_info(db, db_cur, vid_id):
             videos.comment              AS comment,
             videos.views                AS views,
             videos.obsoleted            AS obsoleted,
+            videos.rendered_by          AS rendered_by,
             DATE_FORMAT(videos.date, "%Y-%m-%dT%TZ") AS date
         FROM
             videos

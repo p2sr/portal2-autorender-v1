@@ -32,6 +32,7 @@ xhttp.onload = () => {
 	document.getElementById("eye").classList.remove("hidden");
 	document.getElementById("runRank").innerHTML = rankStr(info);
 	document.getElementById("runDate").innerHTML = new Date(info.date).toDateString();
+	document.getElementById("renderedBy").innerHTML = info.rendered_by;
 
 	if (info.comment !== null) {
 		document.getElementById("runComment").innerHTML = info.comment;
