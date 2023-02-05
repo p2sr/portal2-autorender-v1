@@ -393,9 +393,12 @@ def upload_pending(username, db, db_cur):
 @with_db
 @authenticated
 def upload_video(username, db, db_cur, vid_id):
-    db_cur.execute("SELECT 1 FROM videos WHERE video_url IS NULL AND should_render = TRUE AND id=?", (vid_id,))
-    if not db_cur.fetchone():
+    db_cur.execute("SELECT orig_rank FROM videos WHERE video_url IS NULL AND should_render = TRUE AND id=?", (vid_id,))
+    row = db_cur.fetchone()
+    if not row:
         abort(404) # Not Found
+
+    rank = row[0]
 
     if len(request.data) > 500_000_000: # 500 MB
         abort(413) # Payload Too Large
@@ -457,17 +460,14 @@ def upload_video(username, db, db_cur, vid_id):
     os.remove(f"{settings.TMP_DIR}/{vid_id}.mp4")
     os.remove(f"{settings.TMP_DIR}/{vid_id}.jpg")
 
-
-    requests.post(
-        settings.WEBHOOK_URL,
-        params={
-            "thread_id": "1005216644907409438",
-        },
-        json={
-            "username": "Auto-Render",
-            "content": f"https://autorender.portal2.sr/video.html?v={vid_id}",
-        },
-    )
+    if rank == 1:
+        requests.post(
+            settings.WR_WEBHOOK_URL,
+            json={
+                "username": "Portal2Boards Auto-Render",
+                "content": f"https://autorender.portal2.sr/video.html?v={vid_id}",
+            },
+        )
 
     return {}
 
