@@ -22,6 +22,38 @@ videoPlayer.addEventListener("timeupdate", () => {
 	}
 });
 
+const getCookie = (name) => {
+	let decoded = decodeURIComponent(document.cookie);
+	let ca = decoded.split(';');
+	for (let i = 0; i < ca.length; ++i) {
+		let c = ca[i];
+		while (c.charAt(0) == ' ') c = c.substring(1);
+		if (c.indexOf(`${name}=`) == 0) {
+			return c.substring(name.length + 1);
+		}
+	}
+	return "";
+};
+
+const setCookie = (name, val) => {
+	const d = new Date();
+	d.setTime(d.getTime() + (90*24*60*60*1000)); // 90 days
+	document.cookie = `${name}=${val};expires=${d.toUTCString()};path=/`;
+};
+
+{
+	let vol = getCookie("video-volume");
+	if (vol != "") {
+		videoPlayer.volume = vol;
+	} else {
+		setCookie("video-volume", videoPlayer.volume);
+	}
+
+	videoPlayer.addEventListener("volumechange", (e) => {
+		setCookie("video-volume", videoPlayer.volume);
+	});
+}
+
 const xhttp = new XMLHttpRequest();
 xhttp.onload = () => {
 	const info = JSON.parse(xhttp.responseText);
