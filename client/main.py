@@ -168,12 +168,22 @@ async def upload_demo(demo):
         print(f"Failed to re-encode {dem_id}! Using original render.")
         shutil.copy(f"{settings.RENDER_TMP_DIR}/{dem_id}.mp4", f"{settings.RENDER_TMP_DIR}/{dem_id}_reencoded.mp4")
 
-    with open(f"{settings.RENDER_TMP_DIR}/{dem_id}_reencoded.mp4", "rb") as f:
-        auth = requests.auth.HTTPBasicAuth(settings.API_UNAME, settings.API_PWORD)
-        r = await asyncio.get_event_loop().run_in_executor(None, lambda: requests.put(f"{settings.API_BASE}/upload/video/{dem_id}", auth=auth, data=f))
-        if r.status_code != 200:
-            print(f"Rendered demo {dem_id}, but failed to upload!")
-            report_corrupt_demo(demo, f"Video upload failed with status {r.status_code}")
+    success = False
+    max_attempts = 3 # try to upload 3 times before giving up
+    upload_attempt_delay = 30000 # wait 30s between upload attempts
+    for attempt in range(max_attempts):
+        with open(f"{settings.RENDER_TMP_DIR}/{dem_id}_reencoded.mp4", "rb") as f:
+            auth = requests.auth.HTTPBasicAuth(settings.API_UNAME, settings.API_PWORD)
+            r = await asyncio.get_event_loop().run_in_executor(None, lambda: requests.put(f"{settings.API_BASE}/upload/video/{dem_id}", auth=auth, data=f))
+            if r.status_code == 200:
+                success = True
+                break
+            else:
+                await asyncio.sleep(upload_attempt_delay)
+
+    if not success:
+        print(f"Rendered demo {dem_id}, but failed to upload!")
+        report_corrupt_demo(demo, f"Video upload failed with status {r.status_code}")
 
     os.unlink(f"{settings.RENDER_TMP_DIR}/{dem_id}.mp4")
     os.unlink(f"{settings.RENDER_TMP_DIR}/{dem_id}_reencoded.mp4")
